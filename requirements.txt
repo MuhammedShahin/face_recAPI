@@ -4,5 +4,5 @@ h5py==2.10.0
 Keras==2.1.6
 numpy==1.18.5
 scipy==1.4.1
-tensorflow==1.7.0
+tensorflow==1.15.2
 gunicorn==19.0.0
