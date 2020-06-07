@@ -1,6 +1,7 @@
 import numpy as np
 import cv2
 from scipy.spatial import distance
+import pickle
 
 
 # This line to ignore np package FutureWarning
@@ -11,7 +12,7 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 image_size = 160
 cascade_path = 'modelFiles/haarcascade_frontalface_alt2.xml'
 model_path = 'modelFiles/facenet_keras.h5'
-
+threshold = 1.12
 
 def prewhiten(x):
     if x.ndim == 4:
@@ -65,3 +66,19 @@ def get_diff(img1, model, graph):
     embs1 = encoding(image1, model, graph)
     embs2 = encoding(image2, model, graph)
     return distance.euclidean(embs1, embs2)
+
+
+def identify(img, model, graph):
+
+    data = pickle.load(open('save.p', 'rb'))
+    image = prewhiten(face_align(img))
+    embs = encoding(image, model, graph)
+    min_dist = 1000
+    matched_name = None
+    for val in data.values():
+        dist = distance.euclidean(val[1], embs)
+        if dist < min_dist and dist < threshold:
+            matched_name = val[0]
+            min_dist = dist
+
+    return matched_name, min_dist

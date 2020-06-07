@@ -1,9 +1,8 @@
-import numpy as np
-import cv2
 from flask import Flask, request, jsonify, render_template
-from Model_functions import get_diff
+from Model_functions import *
 from keras.models import load_model
 import tensorflow as tf
+from PIL import Image
 
 # This line to ignore np package FutureWarning
 import warnings
@@ -41,7 +40,34 @@ def predict_api():
 
     # return Response(response=response_pickled, status=200, mimetype="application/json")
     # return jsonify(get_diff(img, model, graph))
-    return jsonify(get_diff(img, model, graph))
+    return jsonify(identify(img, model, graph))
+
+
+@app.route('/add_api',methods=['POST'])
+def add_api():
+    file = request.files['image']
+    # Read the image via file.stream
+    img = Image.open(file.stream)
+    payload = request.form.to_dict()
+    id = payload['id']
+    name = payload['name']
+    img = np.array(img)
+
+    # Encode image
+    image1 = prewhiten(face_align(img))
+    encod = encoding(image1, model, graph)
+
+    # dic = {id: [name, encod]}
+    # pickle.dump(dic, open("save.p", "wb"))
+    dic = pickle.load(open("save.p", "rb"))
+    if id not in dic:
+        dic[id] = [name, encod]
+        pickle.dump(dic, open("save.p", "wb"))
+        print(dic)
+        return 'Added successfully'
+
+    return 'Already exist'
+
 
 
 # if __name__ == "__main__":
