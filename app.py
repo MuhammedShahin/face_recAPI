@@ -3,6 +3,9 @@ from Model_functions import *
 from keras.models import load_model
 import tensorflow as tf
 from PIL import Image
+from keras import backend as k
+import json
+
 
 # This line to ignore np package FutureWarning
 import warnings
@@ -13,6 +16,7 @@ global graph
 graph = tf.get_default_graph()
 model_path = './modelFiles/facenet_keras.h5'
 model = load_model(model_path)
+k.set_learning_phase(0)
 
 app = Flask(__name__)
 
@@ -22,35 +26,32 @@ def home():
     return render_template('index.html')
 
 
-@app.route('/predict_api',methods=['POST'])
+@app.route('/try', methods=['POST'])
+def try_():
+    data = request.get_json(force=True)
+    print(data['name'])
+    return data['name']
+
+
+@app.route('/predict_api', methods=['POST'])
 def predict_api():
 
-    r = request
-    # convert string of image data to uint8
-    nparr = np.fromstring(r.data, np.uint8)
-    # decode image
-    img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+    file = request.files['Image']
+    # Read the image via file.stream
+    img = Image.open(file.stream)
+    img = np.array(img)
 
-    # print(img.shape)
-    #
-    # response = {'message': 'image received. size={}x{}'.format(img.shape[1], img.shape[0])
-    #             }
-    # # encode response using jsonpickle
-    # response_pickled = jsonpickle.encode(response)
-
-    # return Response(response=response_pickled, status=200, mimetype="application/json")
-    # return jsonify(get_diff(img, model, graph))
     return jsonify(identify(img, model, graph))
 
 
 @app.route('/add_api',methods=['POST'])
 def add_api():
-    file = request.files['image']
+    file = request.files['Image']
     # Read the image via file.stream
     img = Image.open(file.stream)
     payload = request.form.to_dict()
-    id = payload['id']
-    name = payload['name']
+    id = payload['ID']
+    name = payload['Name']
     img = np.array(img)
 
     # Encode image
