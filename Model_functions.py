@@ -57,15 +57,17 @@ def encoding(img, model, graph):
         return emb
 
 
-def get_diff(img1, model, graph):
-    img2 = cv2.imread('shahin1.jpg', cv2.IMREAD_COLOR)
+def get_diff(img1, img2, model, graph):
 
     image1 = prewhiten(face_align(img1))
     image2 = prewhiten(face_align(img2))
 
     embs1 = encoding(image1, model, graph)
     embs2 = encoding(image2, model, graph)
-    return distance.euclidean(embs1, embs2)
+    dist = distance.euclidean(embs1, embs2)
+    if dist < threshold:
+        return True
+    return False
 
 
 def identify(img, model, graph):
@@ -82,3 +84,39 @@ def identify(img, model, graph):
             min_dist = dist
 
     return matched_name, min_dist
+
+def identify_dataset(img, model, graph , list_of_students):
+
+    image = prewhiten(face_align(img))
+    embs = encoding(image, model, graph)
+    min_dist = 1000
+    matched_name = None
+    id = None
+    for val in list_of_students:
+        print(val[2])
+        dist = distance.euclidean(val[2], embs)
+        if dist < min_dist and dist < threshold:
+            matched_name = val[1]
+            id = val[0]
+            min_dist = dist
+
+    return matched_name, id , min_dist
+
+
+# from Model_functions import *
+# from keras.models import load_model
+# import tensorflow as tf
+# from Facenet_database import *
+# global graph
+# graph = tf.get_default_graph()
+# model_path = './modelFiles/facenet_keras.h5'
+# model = load_model(model_path, compile=False)
+# def main():
+#     list_of_students = get_students_outof_section(3, 2)
+#     image1 = cv2.imread('gomaa0.jpg')
+#     img = cv2.cvtColor(image1, cv2.COLOR_BGR2RGB)
+#     matched_name, id , min_dist = identify_dataset(img, model, graph, list_of_students)
+#     koko=0
+#
+#
+# main()
