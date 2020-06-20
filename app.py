@@ -4,8 +4,8 @@ from keras.models import load_model
 import tensorflow as tf
 from PIL import Image
 from keras import backend as k
-from Facenet_database import *
-
+# from Facenet_database import *
+from classes import *
 
 # This line to ignore np package FutureWarning
 import warnings
@@ -26,13 +26,13 @@ def home():
     return render_template('index.html')
 
 
-@app.route('/TA_login', methods=['POST'])
+@app.route('/TA_login', methods=['POST']) #=======================================================
 def TA_login_api():
     data = request.form.to_dict()
     email = data['email']
     password = data['password']
     # id, subjects, state = login_TA(email, password)
-    return jsonify(login_TA(email, password))
+    return jsonify(TA.login_TA(email, password))
 
 
 @app.route('/get_sections', methods=['POST'])
@@ -41,7 +41,7 @@ def get_sections():
     TAID = data['TA_id']
     subID = data['sub_id']
     # lst_sections, year = get_sections_subject(TAID, subID)
-    return jsonify(get_sections_subject(TAID, subID))
+    return jsonify(Subject.get_sections_subject(TAID, subID))
 
 
 @app.route('/take_attendance', methods=['POST'])
@@ -56,13 +56,13 @@ def record_attendance():
     year = data['year']
     week = data['week']
     subject = data['subject']
-    list_of_students = get_students_outof_section(section_number, year)
+    list_of_students = TA.get_students_outof_section(section_number, year)
     matched_name, id, min_dist = identify_dataset(img, model, graph, list_of_students)
     if matched_name == 'NO Face Found in photo':
         return jsonify('NO face', subject, 'NO Face Found in photo')
 
     if matched_name is not None:
-        insert_attendance(id, subject, week)
+        TA.insert_attendance(id, subject, week)
         return jsonify(matched_name, subject, "Recorded")
     else:
         return jsonify(matched_name, subject, "Not_Recorded as their is no match found!!")
@@ -94,7 +94,7 @@ def predict_api():
     return jsonify(identify(img, model, graph))
 
 
-@app.route('/add_api', methods=['POST'])
+@app.route('/add_api', methods=['POST']) #=============================================
 def add_api():
     file = request.files['Image']
     # Read the image via file.stream
@@ -108,15 +108,16 @@ def add_api():
     img = np.array(img)
 
     # Encode image
-    face = face_align(img)
+    face = FaceNet.face_align(img)
     if face == []:
         return 'NO Face Found in photo!'
-    image1 = prewhiten(face)
-    encod = encoding(image1, model, graph)
+    image1 = FaceNet.prewhiten(face)
+    pred = FaceNet.encoding(image1, model, graph)
+    encod = FaceNet.l2_normalize(pred)
     encod = np.asarray(encod)
     # print(type(encod))
 
-    insert_student(id, name, email, encod, section, year)
+    Student.insert_student(id, name, email, encod, section, year)
     # dic = {id: [name, encod]}
     # pickle.dump(dic, open("save.p", "wb"))
     # dic = pickle.load(open("save.p", "rb"))

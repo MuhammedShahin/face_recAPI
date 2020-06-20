@@ -15,61 +15,65 @@ model_path = 'modelFiles/facenet_keras.h5'
 threshold = 1.12
 
 
-def prewhiten(x):
-    if x.ndim == 4:
-        axis = (1, 2, 3)
-        size = x[0].size
-    elif x.ndim == 3:
-        axis = (0, 1, 2)
-        size = x.size
-    else:
-        raise ValueError('Dimension should be 3 or 4')
+class FaceNet:
+    @staticmethod
+    def prewhiten(x):
+        if x.ndim == 4:
+            axis = (1, 2, 3)
+            size = x[0].size
+        elif x.ndim == 3:
+            axis = (0, 1, 2)
+            size = x.size
+        else:
+            raise ValueError('Dimension should be 3 or 4')
 
-    mean = np.mean(x, axis=axis, keepdims=True)
-    std = np.std(x, axis=axis, keepdims=True)
-    std_adj = np.maximum(std, 1.0/np.sqrt(size))
-    y = (x - mean) / std_adj
-    return y
+        mean = np.mean(x, axis=axis, keepdims=True)
+        std = np.std(x, axis=axis, keepdims=True)
+        std_adj = np.maximum(std, 1.0/np.sqrt(size))
+        y = (x - mean) / std_adj
+        return y
 
+    @staticmethod
+    def l2_normalize(x, axis=-1, epsilon=1e-10):
+        output = x / np.sqrt(np.maximum(np.sum(np.square(x), axis=axis, keepdims=True), epsilon))
+        return output
 
-def l2_normalize(x, axis=-1, epsilon=1e-10):
-    output = x / np.sqrt(np.maximum(np.sum(np.square(x), axis=axis, keepdims=True), epsilon))
-    return output
+    @staticmethod
+    def face_align(img, margin=10):
+        cascade = cv2.CascadeClassifier(cascade_path)
+        faces = cascade.detectMultiScale(img,
+                                         scaleFactor=1.1,
+                                         minNeighbors=3)
+        if len(faces) == 0:
+            return []
+        (x, y, w, h) = faces[0]
+        cropped = img[y - margin // 2:y + h + margin // 2,
+                  x - margin // 2:x + w + margin // 2, :]
+        # aligned = resize(cropped, (image_size, image_size), mode='reflect')
+        aligned = cv2.resize(cropped, (image_size, image_size))
+        return aligned
 
-
-def face_align(img, margin=10):
-    cascade = cv2.CascadeClassifier(cascade_path)
-    faces = cascade.detectMultiScale(img,
-                                     scaleFactor=1.1,
-                                     minNeighbors=3)
-    if len(faces) == 0:
-        return []
-    (x, y, w, h) = faces[0]
-    cropped = img[y - margin // 2:y + h + margin // 2,
-              x - margin // 2:x + w + margin // 2, :]
-    # aligned = resize(cropped, (image_size, image_size), mode='reflect')
-    aligned = cv2.resize(cropped, (image_size, image_size))
-    return aligned
-
-
-def encoding(img, model, graph):
-    with graph.as_default():
-        pred = model.predict(np.expand_dims(img, axis=0))
-        emb = l2_normalize(pred)
-        return emb
+    @staticmethod
+    def encoding(img, model, graph):
+        with graph.as_default():
+            pred = model.predict(np.expand_dims(img, axis=0))
+            # emb = l2_normalize(pred)
+            return pred
 
 
 def get_diff(img1, img2, model, graph):
 
-    face1 = face_align(img1)
-    face2 = face_align(img2)
+    face1 = FaceNet.face_align(img1)
+    face2 = FaceNet.face_align(img2)
     if face1 == [] or face2 == []:
         return 'No face found in photo'
-    image1 = prewhiten(face1)
-    image2 = prewhiten(face2)
+    image1 = FaceNet.prewhiten(face1)
+    image2 = FaceNet.prewhiten(face2)
 
-    embs1 = encoding(image1, model, graph)
-    embs2 = encoding(image2, model, graph)
+    pred1 = FaceNet.encoding(image1, model, graph)
+    embs1 = FaceNet.l2_normalize(pred1)
+    pred2 = FaceNet.encoding(image2, model, graph)
+    embs2 = FaceNet.l2_normalize(pred2)
     dist = distance.euclidean(embs1, embs2)
     if dist < threshold:
         return 'Same Person!'
@@ -79,8 +83,9 @@ def get_diff(img1, img2, model, graph):
 def identify(img, model, graph):
 
     data = pickle.load(open('save.p', 'rb'))
-    image = prewhiten(face_align(img))
-    embs = encoding(image, model, graph)
+    image = FaceNet.prewhiten(FaceNet.face_align(img))
+    pred = FaceNet.encoding(image, model, graph)
+    embs = FaceNet.l2_normalize(pred)
     min_dist = 1000
     matched_name = None
     for val in data.values():
@@ -93,11 +98,12 @@ def identify(img, model, graph):
 
 
 def identify_dataset(img, model, graph, list_of_students):
-    face = face_align(img)
+    face = FaceNet.face_align(img)
     if face == []:
         return 'NO Face Found in photo', None, None
-    image = prewhiten(face)
-    embs = encoding(image, model, graph)
+    image = FaceNet.prewhiten(face)
+    pred = FaceNet.encoding(image, model, graph)
+    embs = FaceNet.l2_normalize(pred)
     min_dist = 1000
     matched_name = None
     id = None
