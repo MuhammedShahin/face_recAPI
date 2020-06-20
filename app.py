@@ -7,9 +7,6 @@ from keras import backend as k
 from Facenet_database import *
 
 
-#Database
-
-
 # This line to ignore np package FutureWarning
 import warnings
 warnings.filterwarnings("ignore", category=FutureWarning)
@@ -23,18 +20,14 @@ k.set_learning_phase(0)
 
 app = Flask(__name__)
 
-# students that wnat to take attendance
-# global list_of_students
-# list_of_students=[]
 
 @app.route('/')
 def home():
     return render_template('index.html')
 
 
-@app.route('/TA_login',methods=['POST'])
+@app.route('/TA_login', methods=['POST'])
 def TA_login_api():
-
     data = request.form.to_dict()
     email = data['email']
     password = data['password']
@@ -51,17 +44,6 @@ def get_sections():
     return jsonify(get_sections_subject(TAID, subID))
 
 
-# @app.route('/prepare_students_ofsection', methods=['POST'])
-# def prepare_students_ofsection():
-#     data = request.form.to_dict()
-#     section_number = data['section_number']
-#     year = data['year']
-#     list_of_students = get_students_outof_section(section_number , year)
-#     # print(list_of_students)
-#     # return jsonify(list_of_students)
-#     return "Done prepare students for attendance!"
-
-
 @app.route('/take_attendance', methods=['POST'])
 def record_attendance():
     file = request.files['Image']
@@ -76,7 +58,10 @@ def record_attendance():
     subject = data['subject']
     list_of_students = get_students_outof_section(section_number, year)
     matched_name, id, min_dist = identify_dataset(img, model, graph, list_of_students)
-    if matched_name != None:
+    if matched_name == 'NO Face Found in photo':
+        return jsonify('NO face', subject, 'NO Face Found in photo')
+
+    if matched_name is not None:
         insert_attendance(id, subject, week)
         return jsonify(matched_name, subject, "Recorded")
     else:
@@ -94,12 +79,8 @@ def check_diff():
     img2 = Image.open(file2.stream)
     img2 = np.array(img2)
 
-    same = get_diff(img1, img2, model, graph)
-    if same:
-        return 'Same Person!'
-    return 'different persons!'
-
-
+    result = get_diff(img1, img2, model, graph)
+    return result
 
 
 @app.route('/predict_api', methods=['POST'])
@@ -113,7 +94,7 @@ def predict_api():
     return jsonify(identify(img, model, graph))
 
 
-@app.route('/add_api',methods=['POST'])
+@app.route('/add_api', methods=['POST'])
 def add_api():
     file = request.files['Image']
     # Read the image via file.stream
@@ -127,10 +108,13 @@ def add_api():
     img = np.array(img)
 
     # Encode image
-    image1 = prewhiten(face_align(img))
+    face = face_align(img)
+    if face == []:
+        return 'NO Face Found in photo!'
+    image1 = prewhiten(face)
     encod = encoding(image1, model, graph)
     encod = np.asarray(encod)
-    print(type(encod))
+    # print(type(encod))
 
     insert_student(id, name, email, encod, section, year)
     # dic = {id: [name, encod]}
@@ -142,7 +126,7 @@ def add_api():
     #     print(dic)
     #     return 'Added successfully'
 
-    return 'Already exist'
+    return 'New Student Added'
 
 
 

@@ -6,7 +6,6 @@ import numpy as np
 
 DATABASE_PATH = 'database.db'
 
-global list_of_students
 
 def create_table(conn, create_table_sql):
     """ create a table from the create_table_sql statement

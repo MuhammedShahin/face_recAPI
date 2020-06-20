@@ -14,6 +14,7 @@ cascade_path = 'modelFiles/haarcascade_frontalface_alt2.xml'
 model_path = 'modelFiles/facenet_keras.h5'
 threshold = 1.12
 
+
 def prewhiten(x):
     if x.ndim == 4:
         axis = (1, 2, 3)
@@ -41,7 +42,8 @@ def face_align(img, margin=10):
     faces = cascade.detectMultiScale(img,
                                      scaleFactor=1.1,
                                      minNeighbors=3)
-
+    if len(faces) == 0:
+        return []
     (x, y, w, h) = faces[0]
     cropped = img[y - margin // 2:y + h + margin // 2,
               x - margin // 2:x + w + margin // 2, :]
@@ -59,15 +61,19 @@ def encoding(img, model, graph):
 
 def get_diff(img1, img2, model, graph):
 
-    image1 = prewhiten(face_align(img1))
-    image2 = prewhiten(face_align(img2))
+    face1 = face_align(img1)
+    face2 = face_align(img2)
+    if face1 == [] or face2 == []:
+        return 'No face found in photo'
+    image1 = prewhiten(face1)
+    image2 = prewhiten(face2)
 
     embs1 = encoding(image1, model, graph)
     embs2 = encoding(image2, model, graph)
     dist = distance.euclidean(embs1, embs2)
     if dist < threshold:
-        return True
-    return False
+        return 'Same Person!'
+    return 'different persons!'
 
 
 def identify(img, model, graph):
@@ -85,9 +91,12 @@ def identify(img, model, graph):
 
     return matched_name, min_dist
 
-def identify_dataset(img, model, graph , list_of_students):
 
-    image = prewhiten(face_align(img))
+def identify_dataset(img, model, graph, list_of_students):
+    face = face_align(img)
+    if face == []:
+        return 'NO Face Found in photo', None, None
+    image = prewhiten(face)
     embs = encoding(image, model, graph)
     min_dist = 1000
     matched_name = None
