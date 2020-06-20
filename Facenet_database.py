@@ -2,7 +2,7 @@ import io
 import sqlite3
 from sqlite3 import Error
 import numpy as np
-
+from classes import *
 
 DATABASE_PATH = 'database.db'
 
@@ -470,3 +470,4 @@ def insert_attendance(student_id, subject_id , week_num):
 # insert_attendance(2016170341, "AI" , 5)
 # [2,3,6,9,12,15]
 # [4,5,7,13,16,19]
+

@@ -26,7 +26,7 @@ def home():
     return render_template('index.html')
 
 
-@app.route('/TA_login', methods=['POST']) #=======================================================
+@app.route('/TA_login', methods=['POST'])
 def TA_login_api():
     data = request.form.to_dict()
     email = data['email']
@@ -94,7 +94,7 @@ def predict_api():
     return jsonify(identify(img, model, graph))
 
 
-@app.route('/add_api', methods=['POST']) #=============================================
+@app.route('/add_api', methods=['POST'])
 def add_api():
     file = request.files['Image']
     # Read the image via file.stream
@@ -130,5 +130,38 @@ def add_api():
     return 'New Student Added'
 
 
+@app.route('/TA_register', methods=['POST'])
+def ta_register():
+    data = request.form.to_dict()
+    name = data['Name']
+    email = data['email']
+    password = data['password']
+    TA.insert_ta(name, email, password)
+    return 'Registered !'
 
 
+@app.route('/TA_assignment', methods=['POST'])
+def ta_assign_subject():
+    data = request.form.to_dict()
+    TAID = data['TA_id']
+    subID = data['sub_id']
+    lst_sections = data['sections'].split(',')
+    intList = list(map(int, lst_sections))
+    Subject.assign_subjectTO_ta(TAID, subID, intList)
+    return 'Assigned successfully !'
+
+
+@app.route('/TA_remove', methods=['POST'])
+def ta_remove():
+    data = request.form.to_dict()
+    email = data['email']
+    TA.remove_TA(email)
+    return 'TA Removed'
+
+
+@app.route('/student_remove', methods=['POST'])
+def student_remove():
+    data = request.form.to_dict()
+    ID = data['ID']
+    Student.remove_student(ID)
+    return 'Student Deleted'

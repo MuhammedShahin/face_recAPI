@@ -113,32 +113,34 @@ class Student:
                 print("The SQLite connection is closed")
 
     @staticmethod
-    def get_students_outof_section(section_number, year):
+    def remove_student(student_id):
         try:
-            # Converts np.array to TEXT when inserting
-            sqlite3.register_adapter(np.ndarray, adapt_array)
 
-            # Converts TEXT to np.array when selecting
-            sqlite3.register_converter("array", convert_array)
-
-            sqliteConnection = sqlite3.connect(DATABASE_PATH, detect_types=sqlite3.PARSE_DECLTYPES)
+            sqliteConnection = sqlite3.connect(DATABASE_PATH)
             cursor = sqliteConnection.cursor()
 
-            print("Connected to SQLite")
+            sql_stat = 'DELETE FROM Attendance WHERE student_id=?'
+            cursor.execute(sql_stat, (student_id,))
+            sqliteConnection.commit()
+            print("Done!!")
 
-            sql_select_query = """select ID , Name , photo from Students where section = ? and year= ?"""
-            cursor.execute(sql_select_query, (section_number, year,))
-            records = cursor.fetchall()
-            list_of_students = [list(rows) for rows in records]
-            # print(list_of_students)
+            sql_stat = 'DELETE FROM Student_subject WHERE Student_id=?'
+            cursor.execute(sql_stat, (student_id,))
+            sqliteConnection.commit()
+            print("Done!!")
+
+            sql_stat = 'DELETE FROM Students WHERE ID=?'
+            cursor.execute(sql_stat, (student_id,))
+            sqliteConnection.commit()
+            print("Done!!")
             cursor.close()
+
         except sqlite3.Error as error:
-            print("Failed to read data from sqlite table", error)
+            print("Failed to insert Python variable into sqlite table", error)
         finally:
             if (sqliteConnection):
                 sqliteConnection.close()
                 print("The SQLite connection is closed")
-                return list_of_students
 
 
 class TA:
@@ -264,6 +266,40 @@ class TA:
                 sqliteConnection.close()
                 print("The SQLite connection is closed")
 
+    @staticmethod
+    def remove_TA(email):
+        try:
+            sqliteConnection = sqlite3.connect(DATABASE_PATH)
+            cursor = sqliteConnection.cursor()
+            sql_getID ='select ID FROM TA WHERE email=?'
+            cursor.execute(sql_getID, (email,))
+            TA_id = cursor.fetchone()[0]
+            print(TA_id)
+            sql_stat = 'select id_TA_subject_section from TA_Subjects where ta_id = ?'
+
+            cursor.execute(sql_stat, (TA_id,))
+            records = cursor.fetchall()
+            for row in records:
+                sql_stat = 'DELETE FROM RE_section_subject_TA WHERE id_ta_subject=?'
+                cursor.execute(sql_stat, (row[0],))
+                sqliteConnection.commit()
+            print("Done!!")
+            sql_stat = 'DELETE FROM TA_Subjects WHERE ta_id=?'
+            cursor.execute(sql_stat, (TA_id,))
+            sqliteConnection.commit()
+            print("Done!!")
+            sql_stat = 'DELETE FROM TA WHERE ID=?'
+            cursor.execute(sql_stat, (TA_id,))
+            sqliteConnection.commit()
+            print("Done!!")
+            cursor.close()
+        except sqlite3.Error as error:
+            print("Failed to insert Python variable into sqlite table", error)
+        finally:
+            if (sqliteConnection):
+                sqliteConnection.close()
+                print("The SQLite connection is closed")
+
 class Subject:
     @staticmethod
     def insert_subject(subID, year):
@@ -316,3 +352,50 @@ class Subject:
         lst_sections = [row[0] for row in records]
         conn.close()
         return lst_sections, year
+
+    @staticmethod
+    def assign_subjectTO_ta(TA_ID, subject_id, lst_sections):
+        try:
+
+            sqliteConnection = sqlite3.connect(DATABASE_PATH)
+            cursor = sqliteConnection.cursor()
+            print("Connected to SQLite")
+
+            sqlite_select = """select max(id_TA_subject_section) from TA_Subjects"""
+            cursor.execute(sqlite_select)
+            record = cursor.fetchall()
+            id_TA_subject_section = None
+            if record != [(None,)]:
+                id_TA_subject_section = record[0][0] + 1
+            elif record == [(None,)]:
+                id_TA_subject_section = 0
+            else:
+                id_TA_subject_section = 0
+
+            sqlite_insert_with_param = """INSERT INTO TA_Subjects
+                                 (ta_id, subjects_id, id_TA_subject_section) 
+                                 VALUES (?, ?, ?);"""
+            # Converts np.array to TEXT when inserting
+            # print('type of the photo --------:', type(photo))
+            data_tuple = (TA_ID, subject_id, id_TA_subject_section)
+            cursor.execute(sqlite_insert_with_param, data_tuple)
+            sqliteConnection.commit()
+
+            for sec in lst_sections:
+                sqlite_insert_with_param = """INSERT INTO RE_section_subject_TA
+                                             (id_ta_subject, section) 
+                                             VALUES (?, ?);"""
+                # Converts np.array to TEXT when inserting
+                # print('type of the photo --------:', type(photo))
+                data_tuple = (id_TA_subject_section, sec)
+                cursor.execute(sqlite_insert_with_param, data_tuple)
+            sqliteConnection.commit()
+
+            print("Done!!")
+            cursor.close()
+        except sqlite3.Error as error:
+            print("Failed to insert Python variable into sqlite table", error)
+        finally:
+            if (sqliteConnection):
+                sqliteConnection.close()
+                print("The SQLite connection is closed")
