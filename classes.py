@@ -112,34 +112,6 @@ class Student:
                 sqliteConnection.close()
                 print("The SQLite connection is closed")
 
-    @staticmethod
-    def get_students_outof_section(section_number, year):
-        try:
-            # Converts np.array to TEXT when inserting
-            sqlite3.register_adapter(np.ndarray, adapt_array)
-
-            # Converts TEXT to np.array when selecting
-            sqlite3.register_converter("array", convert_array)
-
-            sqliteConnection = sqlite3.connect(DATABASE_PATH, detect_types=sqlite3.PARSE_DECLTYPES)
-            cursor = sqliteConnection.cursor()
-
-            print("Connected to SQLite")
-
-            sql_select_query = """select ID , Name , photo from Students where section = ? and year= ?"""
-            cursor.execute(sql_select_query, (section_number, year,))
-            records = cursor.fetchall()
-            list_of_students = [list(rows) for rows in records]
-            # print(list_of_students)
-            cursor.close()
-        except sqlite3.Error as error:
-            print("Failed to read data from sqlite table", error)
-        finally:
-            if (sqliteConnection):
-                sqliteConnection.close()
-                print("The SQLite connection is closed")
-                return list_of_students
-
 
 class TA:
     @staticmethod
