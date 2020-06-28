@@ -2,6 +2,7 @@ import numpy as np
 import cv2
 from scipy.spatial import distance
 import pickle
+from align import AlignDlib
 
 
 # This line to ignore np package FutureWarning
@@ -97,10 +98,25 @@ def identify(img, model, graph):
     return matched_name, min_dist
 
 
+alignment = AlignDlib('landmarks.dat')
+
+
+def face_align11(image):
+    img = image.astype(np.uint8)
+    bb1 = alignment.getLargestFaceBoundingBox(img, skipMulti=True)
+    aligned_image = alignment.align(160, img, bb1, landmarkIndices=AlignDlib.OUTER_EYES_AND_NOSE)
+    koko = 'hello'
+    return aligned_image, bb1
+
+
 def identify_dataset(img, model, graph, list_of_students):
-    face = FaceNet.face_align(img)
-    if face == []:
+    # face = FaceNet.face_align(img)
+    face, bb = face_align11(img)
+    # if face == []:
+        # return 'NO Face Found in photo', None, None
+    if bb is None:
         return 'NO Face Found in photo', None, None
+
     image = FaceNet.prewhiten(face)
     pred = FaceNet.encoding(image, model, graph)
     embs = FaceNet.l2_normalize(pred)
